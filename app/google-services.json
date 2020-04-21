@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "576118191182",
+    "firebase_url": "https://covidmaroc-4ebaa.firebaseio.com",
+    "project_id": "covidmaroc-4ebaa",
+    "storage_bucket": "covidmaroc-4ebaa.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:576118191182:android:43d739ac8d2a6d9caeff1f",
+        "android_client_info": {
+          "package_name": "ma.fst.covidmaroc"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "576118191182-smb7p2hbivj0t35bek1nj5sgnbnuku34.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ma.fst.covidmaroc",
+            "certificate_hash": "29db96db45b145a2f8ae32546d0bc630b92cb6e9"
+          }
+        },
+        {
+          "client_id": "576118191182-g9tvi78vvnpc8n8gga8ol8rvnj9dltls.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQj5uDq65XxR_beOliex2iSbrtbv-2hh4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "576118191182-g9tvi78vvnpc8n8gga8ol8rvnj9dltls.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

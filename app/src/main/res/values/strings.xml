@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">CovidMAROC</string>
+    <string name="scan_nearby">Scan Nearby</string>
+    <string name="get_from_database">Get from DataBase</string>
+    <string name="stop">STOP</string>
+    <string name="name">Name</string>
+    <string name="start">Start</string>
+    <string name="arr_ter_tracage">Arrêter Tracage</string>
+    <string name="d_marrer_tracage">Démarrer tracage</string>
+    <string name="votre_cin">Votre CIN</string>
+</resources>
