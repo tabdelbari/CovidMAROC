@@ -8,4 +8,5 @@
     <string name="arr_ter_tracage">Arrêter Tracage</string>
     <string name="d_marrer_tracage">Démarrer tracage</string>
     <string name="votre_cin">Votre CIN</string>
+    <string name="title_activity_maps">Map</string>
 </resources>
