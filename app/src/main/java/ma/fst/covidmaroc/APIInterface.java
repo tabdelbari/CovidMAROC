@@ -9,18 +9,18 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
 
 public interface APIInterface {
 
+    @POST("/api/users")
+    Call<User> saveUser(@Body User user);
+    @POST("/api/paths")
+    Call<Path> savePath(@Body Path path);
     @POST("/api/collisions")
-    Call<Collision> createCollision(@Body Collision collision);
+    Call<List<Collision>> saveCollisions(@Body List<Collision> collisions);
 
-    @GET("/api/users")
-    Call<List<User>> getUsers();
+    @PUT("/api/users/{cin}")
+    Call<User> putUser(@retrofit2.http.Path("cin") String cin, @Body User user);
 
-    @GET("/api/paths")
-    Call<List<Path>> getPaths();
-
-    @GET("/api/collisions")
-    Call<List<Collision>> getCollisions();
 }

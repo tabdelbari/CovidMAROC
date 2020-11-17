@@ -2,6 +2,8 @@ package ma.fst.covidmaroc.model;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.util.Date;
+
 public class Collision {
 
     @SerializedName("id")
@@ -13,9 +15,12 @@ public class Collision {
     @SerializedName("cinNear")
     private String cinNear;
     @SerializedName("date")
-    private Long date;
+    private String date;
     @SerializedName("duration")
     private Long duration;
+    private double lat;
+    @SerializedName("lng")
+    private double lng;
 
     public Collision() {
     }
@@ -52,11 +57,11 @@ public class Collision {
         this.cinNear = cinNear;
     }
 
-    public Long getDate() {
+    public String getDate() {
         return date;
     }
 
-    public void setDate(Long date) {
+    public void setDate(String date) {
         this.date = date;
     }
 
@@ -66,5 +71,21 @@ public class Collision {
 
     public void setDuration(Long duration) {
         this.duration = duration;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public void setLat(double lat) {
+        this.lat = lat;
+    }
+
+    public double getLng() {
+        return lng;
+    }
+
+    public void setLng(double lng) {
+        this.lng = lng;
     }
 }
