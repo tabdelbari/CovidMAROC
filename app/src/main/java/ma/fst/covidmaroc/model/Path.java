@@ -13,6 +13,10 @@ public class Path {
     private String date;
     @SerializedName("cin")
     private String cin;
+    @SerializedName("color")
+    private int color;
+    @SerializedName("collision")
+    private int collision;
 
     public Path() { }
 
@@ -46,5 +50,21 @@ public class Path {
 
     public void setCin(String cin) {
         this.cin = cin;
+    }
+
+    public int getColor() {
+        return color;
+    }
+
+    public void setColor(int color) {
+        this.color = color;
+    }
+
+    public int getCollision() {
+        return collision;
+    }
+
+    public void setCollision(int collision) {
+        this.collision = collision;
     }
 }

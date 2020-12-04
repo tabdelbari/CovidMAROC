@@ -3,12 +3,17 @@ package ma.fst.covidmaroc;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
@@ -24,6 +29,15 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -32,6 +46,9 @@ import com.google.android.gms.nearby.connection.ConnectionResolution;
 import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo;
 import com.google.android.gms.nearby.connection.DiscoveryOptions;
 import com.google.android.gms.nearby.connection.EndpointDiscoveryCallback;
+import com.google.android.gms.nearby.connection.Payload;
+import com.google.android.gms.nearby.connection.PayloadCallback;
+import com.google.android.gms.nearby.connection.PayloadTransferUpdate;
 import com.google.android.gms.nearby.connection.Strategy;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -54,7 +71,7 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
     private static final String TAG = "MainActivity";
 
     private FusedLocationProviderClient fusedLocationProviderClient;
@@ -66,15 +83,16 @@ public class MainActivity extends AppCompatActivity {
     private HashMap<String, Long> firstCollistions;
 
     private EditText text_cin;
-    private Button btn_demarrer, btn_arreter;
+    private Button btn_demarrer;
 
     private boolean nearby_started;
 
     public static final String SEVICE_ID = "ma.fst.covidmaroc.SERVICE_ID";
 
-    private FirebaseFirestore db;
-
     private APIInterface apiInterface;
+
+    private GoogleMap mMap;
+    private ArrayList<LatLng> mPath;
 
     /**------------------------start PERMITIONS----------------------------*/
     private static final String[] REQUIRED_PERMISSIONS = new String[]{
@@ -100,6 +118,16 @@ public class MainActivity extends AppCompatActivity {
                 if (user != null){
                     user.setLat(locationResult.getLastLocation().getLatitude());
                     user.setLng(locationResult.getLastLocation().getLongitude());
+                    LatLng posision = new LatLng(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+                    if (mMap != null && mPath != null) {
+                        if ((mPath.size()>0 &&
+                                !(mPath.get(mPath.size()-1).latitude == posision.latitude &&
+                                mPath.get(mPath.size()-1).longitude == posision.longitude)) || mPath.size()==0)
+                            mPath.add(posision);
+                        mMap.clear();
+                        mMap.addPolyline(new PolylineOptions().color(Color.BLUE).addAll(mPath));
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(posision, 20));
+                    }
                     apiInterface.putUser(user.getCin(), user).enqueue(new Callback<User>() {
                         @Override
                         public void onResponse(Call<User> call, Response<User> response) {
@@ -124,11 +152,13 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         btn_demarrer = findViewById(R.id.btn_demarrer);
-        btn_arreter = findViewById(R.id.btn_arreter);
         apiInterface = APIClient.getClient().create(APIInterface.class);
         refresh(null);
         new AsyncTaskLoadCIN(this).execute();
-        db = FirebaseFirestore.getInstance();
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
     }
 
     public void requestLocation() {
@@ -143,7 +173,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void refresh(View v){
         btn_demarrer.setEnabled(text_cin.getText().length()>4);
-        btn_arreter.setEnabled(nearby_started);
+        btn_demarrer.setText(nearby_started?R.string.stop:R.string.start);
+        // btn_arreter.setEnabled(nearby_started);
     }
 
     @Override
@@ -154,6 +185,8 @@ public class MainActivity extends AppCompatActivity {
                 requestPermissions(REQUIRED_PERMISSIONS, REQUEST_CODE_REQUIRED_PERMISSIONS);
             }
         }
+
+
         super.onStart();
     }
 
@@ -184,10 +217,24 @@ public class MainActivity extends AppCompatActivity {
     // ============================== ADVERTISING ===================================================================
     private final ConnectionLifecycleCallback connectionLifecycleCallback = new ConnectionLifecycleCallback() {
         @Override
-        public void onConnectionInitiated(@NonNull String s, @NonNull ConnectionInfo connectionInfo) {}
+        public void onConnectionInitiated(String endpointId, ConnectionInfo connectionInfo) {
+            Nearby.getConnectionsClient(MainActivity.this).acceptConnection(endpointId, new PayloadCallback() {
+                @Override
+                public void onPayloadReceived(@NonNull String s, @NonNull Payload payload) {
+                    byte[] receivedBytes = payload.asBytes();
+                    Log.i(TAG, "onPayloadReceived: " + new String(receivedBytes));
+                }
+
+                @Override
+                public void onPayloadTransferUpdate(@NonNull String s, @NonNull PayloadTransferUpdate payloadTransferUpdate) { }
+            });
+        }
 
         @Override
-        public void onConnectionResult(@NonNull String s, @NonNull ConnectionResolution connectionResolution) {}
+        public void onConnectionResult(@NonNull String toEndpointId, @NonNull ConnectionResolution connectionResolution) {
+            Payload bytesPayload = Payload.fromBytes(new byte[] {0xa, 0xb, 0xc, 0xd});
+            Nearby.getConnectionsClient(MainActivity.this).sendPayload(toEndpointId, bytesPayload);
+        }
 
         @Override
         public void onDisconnected(@NonNull String s) {}
@@ -204,6 +251,7 @@ public class MainActivity extends AppCompatActivity {
     private final EndpointDiscoveryCallback endpointDiscoveryCallback = new EndpointDiscoveryCallback() {
         @Override
         public void onEndpointFound(String endpointId, DiscoveredEndpointInfo info) {
+            Nearby.getConnectionsClient(MainActivity.this).requestConnection(text_cin.getText().toString(), endpointId, connectionLifecycleCallback);
             Toast.makeText(MainActivity.this, "Found:"+info.getEndpointName(), Toast.LENGTH_SHORT).show();
             new AsyncTaskInsert(MainActivity.this).execute(
                     new Entry(text_cin.getText().toString(), info.getEndpointName(), new Date().getTime()));
@@ -241,25 +289,37 @@ public class MainActivity extends AppCompatActivity {
     // ===================================================================================================================
 
     public void demarrer(View v){
-        new AsyncTaskInsertCIN(this).execute(new CIN(text_cin.getText().toString()));
-        user = new User();
-        user.setCin(text_cin.getText().toString());
-        path = new Path();
-        path.setCin(text_cin.getText().toString());
-        path.setPathId(System.currentTimeMillis()+"");
-        // yyyy-MM-dd'T'HH:mm:ss.SSS
-        String pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS";
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
-        String date = simpleDateFormat.format(new Date());
-        path.setDate(date);
-        collisions = new ArrayList<>();
-        firstCollistions = new HashMap<>();
-        startAdvertising();
-        startDiscovery();
-        requestLocation();
-        nearby_started = true;
-        text_cin.setEnabled(false);
-        refresh(v);
+        if (!nearby_started){
+            new AsyncTaskInsertCIN(this).execute(new CIN(text_cin.getText().toString()));
+            // =========== USER
+            user = new User();
+            user.setCin(text_cin.getText().toString());
+
+            // =========== PATH
+            path = new Path();
+            path.setCin(text_cin.getText().toString());
+            path.setPathId(System.currentTimeMillis()+"");
+            mPath = new ArrayList<>();
+            // yyyy-MM-dd'T'HH:mm:ss.SSS
+            String pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS";
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+            String date = simpleDateFormat.format(new Date());
+            path.setDate(date);
+
+            // ============ Collisions
+            collisions = new ArrayList<>();
+            firstCollistions = new HashMap<>();
+            // ============ Start
+            startAdvertising();
+            startDiscovery();
+            requestLocation();
+            nearby_started = true;
+            btn_demarrer.setText(R.string.stop);
+            text_cin.setEnabled(false);
+            refresh(v);
+        } else {
+            arreter(v);
+        }
     }
 
     public void arreter(View v){
@@ -308,29 +368,70 @@ public class MainActivity extends AppCompatActivity {
         fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         text_cin.setEnabled(true);
         nearby_started = false;
+        mPath = null;
         refresh(v);
+    }
+
+    public void showPaths(View v){
+        Intent intent = new Intent(MainActivity.this, PathsActivity.class);
+        intent.putExtra("cin", text_cin.getText().toString());
+        startActivity(intent);
+    }
+
+    public void showQR(View v){
+        Intent intent = new Intent(MainActivity.this, QRActivity.class);
+        intent.putExtra("cin", text_cin.getText().toString());
+        startActivity(intent);
     }
 
     public void onLoadCIN(String cin){
         if(cin!=null){
             text_cin.setText(cin);
+            apiInterface.getPaths(cin).enqueue(new Callback<List<Path>>() {
+                @Override
+                public void onResponse(Call<List<Path>> call, Response<List<Path>> response) {
+                    boolean notified = false;
+                    for (Path p:response.body()) {
+                        if (p.getColor()!=-1 && !notified){
+                            createNotificationChannel();
+                            NotificationCompat.Builder builder = new NotificationCompat.Builder(MainActivity.this, "covidmaroc")
+                                    .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                                    .setContentTitle("Covid19: ATTENTION !")
+                                    .setStyle(new NotificationCompat.BigTextStyle()
+                                            .bigText("Déplacez-vous rapidement au service de dépistage le plus proche"))
+                                    .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(MainActivity.this);
+                            // notificationId is a unique int for each notification that you must define
+                            notificationManager.notify(1, builder.build());
+                            notified = true;
+                        }
+                    }
+                }
+
+                private void createNotificationChannel() {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        CharSequence name = "covidmaroc";
+                        String description = "alerts for infections";
+                        int importance = NotificationManager.IMPORTANCE_DEFAULT;
+                        NotificationChannel channel = new NotificationChannel("covidmaroc", name, importance);
+                        channel.setDescription(description);
+                        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+                        notificationManager.createNotificationChannel(channel);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<List<Path>> call, Throwable t) {
+                    Log.e(TAG, "onFailure: CANT GET PATHS", t);
+                }
+            });
         }
         refresh(null);
     }
 
 
-    /**
-     * for debugage
-     */
-    public void startDebugage(View v){
-        Intent intent = new Intent(this, DebugActivity.class);
-        startActivity(intent);
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
     }
-
-    public void startMap(View v){
-        Intent intent = new Intent(this, MapsActivity.class);
-        startActivity(intent);
-    }
-
-
 }

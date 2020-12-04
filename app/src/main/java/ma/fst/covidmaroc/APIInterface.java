@@ -22,5 +22,7 @@ public interface APIInterface {
 
     @PUT("/api/users/{cin}")
     Call<User> putUser(@retrofit2.http.Path("cin") String cin, @Body User user);
+    @GET("/api/paths/{cin}")
+    Call<List<Path>> getPaths(@retrofit2.http.Path("cin") String cin);
 
 }
